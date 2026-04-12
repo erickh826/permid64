@@ -9,9 +9,9 @@ management in production.
     ``build_id64`` currently hard-codes a dispatch table over the three
     built-in permutation kinds (``"multiplicative"``, ``"feistel"``,
     ``"identity"``).
-    v0.3 will replace this with a **registry pattern** so that third-party
-    permutation implementations can be registered and resolved by name
-    without modifying this module.
+    A future release will replace this with a **registry pattern** so that
+    third-party permutation implementations can be registered and resolved by
+    name without modifying this module.
 """
 from __future__ import annotations
 
