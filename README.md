@@ -226,12 +226,16 @@ benchmarks/
 
 ## Roadmap
 
-| Version | Focus |
-|---|---|
-| v0.1 (current) | Core: counter + permutation + decode |
-| v0.2 | `IdentityPermutation`, Base32/Base62 encoding, `Id64Config` |
-| v0.3 | Multi-process file locking, `ReservedBlockSource` (central allocator) |
-| v0.4+ | Rust/Go reference implementations, formal cross-language spec |
+| Version | Theme | What's included | Status |
+|---|---|---|---|
+| **v0.1** | Core primitives | `PersistentCounterSource`, Feistel / multiplicative permutations, basic `decode()` | ✅ Released |
+| **v0.2** | Encoding & config | `IdentityPermutation`, fixed-width Base62 + Crockford Base32 (`next_base62` / `decode_base62`, `next_base32` / `decode_base32`), `Id64Config` + `build_id64` | ✅ Released |
+| **v0.3** | Multi-process safety | Process-safe file locking (`fcntl` / `msvcrt`), single-machine multi-process guarantees (e.g. Gunicorn / prefork), safer state file semantics | 🔜 Next |
+| **v0.4** | Human-friendly output | Check digit (+1 char checksum), prefixed encoders (e.g. `ORD_`, `TKT_`), `FormatSpec` for segmented display, ambiguity-free charsets for manual entry | Planned |
+| **v0.5** | Distributed sources | `ReservedBlockSource` (central allocator, Redis / PG-backed block rental), `instance_id` helpers (hostname hash, env var, StatefulSet ordinal) | Planned |
+| **v0.6** | Solution presets | `OrderIdGenerator`, `TicketIdGenerator`, `CorrelationIdGenerator`, `IoTEventIdGenerator` — ready-made recipes for common use cases | Planned |
+| **v0.7** | Formal spec | Cross-language bit-layout specification, profile aliases (`m1`, `f6`, `human32`), compatibility guarantee document | Planned |
+| **v1.0** | Reference impls | Go reference implementation, Rust reference implementation, three-language cross-decode test suite | Planned |
 
 ---
 
