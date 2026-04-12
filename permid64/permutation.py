@@ -161,15 +161,15 @@ class Feistel64Permutation:
     # ------------------------------------------------------------------
 
     def forward(self, x: int) -> int:
-        l = (x >> 32) & MASK32
+        lo = (x >> 32) & MASK32
         r = x & MASK32
         for k in self.round_keys:
-            l, r = r, (l ^ self._round_f(r, k)) & MASK32
-        return ((l << 32) | r) & MASK64
+            lo, r = r, (lo ^ self._round_f(r, k)) & MASK32
+        return ((lo << 32) | r) & MASK64
 
     def inverse(self, y: int) -> int:
-        l = (y >> 32) & MASK32
+        lo = (y >> 32) & MASK32
         r = y & MASK32
         for k in reversed(self.round_keys):
-            l, r = (r ^ self._round_f(l, k)) & MASK32, l
-        return ((l << 32) | r) & MASK64
+            lo, r = (r ^ self._round_f(lo, k)) & MASK32, lo
+        return ((lo << 32) | r) & MASK64
