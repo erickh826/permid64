@@ -1,0 +1,4 @@
+# file: /home/user/workspace/id64/permid64/permutation.py
+# hypothesis_version: 6.151.12
+
+[2246822507, 2654435761, 4294967295, 2685821657736338717, 18446744073709551615, 'rounds must be >= 1']

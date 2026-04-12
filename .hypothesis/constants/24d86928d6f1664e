@@ -1,0 +1,4 @@
+# file: /home/user/workspace/id64/permid64/__init__.py
+# hypothesis_version: 6.151.12
+
+['0.1.0', 'DecodedId', 'Id64']

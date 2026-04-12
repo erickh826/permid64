@@ -28,6 +28,7 @@ dependencies = []  # zero runtime dependencies
 dev = [
     "pytest>=8.0",
     "pytest-xdist",   # parallel test execution
+    "hypothesis",     # property-based testing
     "ruff",           # linter + formatter
     "mypy",           # static type checker
 ]
