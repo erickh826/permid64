@@ -27,7 +27,7 @@ Usage
 from __future__ import annotations
 
 from .layout import Layout64
-from .permutation import Feistel64Permutation, MultiplyOddPermutation
+from .permutation import Feistel64Permutation, MultiplyOddPermutation, Permutation64Protocol
 from .source import PersistentCounterSource
 from .types import DecodedId
 
@@ -52,7 +52,7 @@ class Id64:
         self,
         instance_id: int,
         source: PersistentCounterSource,
-        permutation: MultiplyOddPermutation | Feistel64Permutation,
+        permutation: Permutation64Protocol,
         layout: Layout64 | None = None,
     ) -> None:
         self.instance_id = instance_id

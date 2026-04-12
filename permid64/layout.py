@@ -28,7 +28,20 @@ class Layout64:
         self.instance_mask = (1 << instance_bits) - 1
 
     def compose(self, instance_id: int, sequence: int) -> int:
-        """Pack instance_id and sequence into a single 64-bit integer."""
+        """
+        Pack instance_id and sequence into a single 64-bit integer.
+
+        Both values are silently masked to their configured bit widths.
+        Values exceeding the field width (e.g. instance_id >= 2^instance_bits)
+        will have their high bits truncated without raising an error.
+        Use ``instance_mask`` / ``sequence_mask`` to validate inputs if
+        strict overflow detection is required.
+        """
+        if sequence > self.sequence_mask:
+            raise OverflowError(
+                f"sequence {sequence} exceeds {self.sequence_bits}-bit maximum "
+                f"({self.sequence_mask}). The ID space for this shard is exhausted."
+            )
         return (
             ((instance_id & self.instance_mask) << self.sequence_bits)
             | (sequence & self.sequence_mask)

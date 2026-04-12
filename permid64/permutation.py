@@ -1,7 +1,13 @@
 """
-permutation.py — Invertible 64-bit permutations for id64.
+permutation.py — Invertible 64-bit permutations for permid64.
 
-Two implementations are provided:
+Protocol
+--------
+Permutation64Protocol
+    Structural protocol for any invertible 64-bit permutation.
+    Implement ``forward`` and ``inverse`` to plug in a custom permutation.
+
+Two built-in implementations:
 
 MultiplyOddPermutation
     f(x) = (a·x + b) mod 2^64
@@ -16,8 +22,36 @@ Feistel64Permutation
 """
 from __future__ import annotations
 
+from typing import Protocol, runtime_checkable
+
 MASK64 = 0xFFFFFFFFFFFFFFFF
 MASK32 = 0xFFFFFFFF
+
+
+@runtime_checkable
+class Permutation64Protocol(Protocol):
+    """
+    Structural protocol for invertible 64-bit permutations.
+
+    Any class that implements ``forward`` and ``inverse`` satisfies this
+    protocol and can be passed to ``Id64.__init__`` as a permutation.
+    This enables dependency injection of custom permutations (e.g. an
+    AES-based Format-Preserving Encryption scheme) without modifying
+    the library.
+
+    Contract:
+        - Both ``forward`` and ``inverse`` operate over [0, 2^64).
+        - ``inverse(forward(x)) == x`` for all x in [0, 2^64).
+        - ``forward(inverse(y)) == y`` for all y in [0, 2^64).
+    """
+
+    def forward(self, x: int) -> int:
+        """Map x -> y, where both are unsigned 64-bit integers."""
+        ...
+
+    def inverse(self, y: int) -> int:
+        """Map y -> x, exactly reversing forward()."""
+        ...
 
 
 # ---------------------------------------------------------------------------
@@ -99,6 +133,21 @@ class Feistel64Permutation:
 
     @staticmethod
     def _round_f(r: int, k: int) -> int:
+        """
+        32-bit mixing function F(r, k) used in each Feistel round.
+
+        Constants used:
+          0x9E3779B1 — Knuth multiplicative hash constant (32-bit version of
+                       the golden-ratio multiplier 2654435761).  Chosen for
+                       near-uniform bit avalanche when used as a multiplier.
+          0x85EBCA6B — MurmurHash3 finalisation constant.  Provides a second
+                       independent mixing stage with strong avalanche.
+
+        The pipeline is: XOR with round-key -> Knuth multiply -> XOR-shift ->
+        left-rotate 5 -> MurmurHash3 multiply -> XOR-shift.  This gives
+        adequate bit diffusion for an obfuscation permutation while remaining
+        fast enough for high-throughput ID generation.
+        """
         x = (r ^ k) & MASK32
         x = (x * 0x9E3779B1) & MASK32
         x ^= (x >> 16)

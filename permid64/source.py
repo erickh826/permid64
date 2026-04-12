@@ -9,8 +9,15 @@ PersistentCounterSource
 """
 from __future__ import annotations
 
+import os
 import threading
 from pathlib import Path
+
+try:
+    import fcntl as _fcntl
+    _HAS_FLOCK = True
+except ImportError:
+    _HAS_FLOCK = False  # Windows: flock not available
 
 
 class PersistentCounterSource:
@@ -56,12 +63,29 @@ class PersistentCounterSource:
         tmp.replace(self.path)  # atomic rename on POSIX
 
     def _reserve_block(self) -> None:
-        """Reserve the next block; must be called under self._lock."""
-        highwater = self._read_highwater()
-        new_highwater = highwater + self.block_size
-        self._write_highwater(new_highwater)
-        self._next = highwater
-        self._limit = new_highwater
+        """
+        Reserve the next block; must be called under self._lock.
+
+        Uses ``fcntl.flock`` (POSIX only) as a best-effort advisory lock
+        during the read-modify-write cycle.  This reduces — but does not
+        fully eliminate — the risk of two processes accidentally sharing the
+        same state file.  For guaranteed multi-process safety, assign each
+        process a distinct state file and instance_id.
+        """
+        lock_fd = None
+        try:
+            if _HAS_FLOCK:
+                lock_fd = open(self.path, "a")  # open/create for locking
+                _fcntl.flock(lock_fd, _fcntl.LOCK_EX)
+            highwater = self._read_highwater()
+            new_highwater = highwater + self.block_size
+            self._write_highwater(new_highwater)
+            self._next = highwater
+            self._limit = new_highwater
+        finally:
+            if lock_fd is not None:
+                _fcntl.flock(lock_fd, _fcntl.LOCK_UN)
+                lock_fd.close()
 
     # ------------------------------------------------------------------
     # Public API

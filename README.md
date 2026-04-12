@@ -6,6 +6,15 @@
 
 permid64 generates unique 64-bit integer IDs without relying on wall-clock time. It combines a crash-safe persistent counter with an invertible permutation to produce IDs that look random but carry recoverable metadata.
 
+```
+# Raw counter (leaks business volume at a glance)
+1001, 1002, 1003 ...
+
+# permid64 (shuffled surface, recoverable structure)
+12609531668580943872, 7349201938475629, 3847291038012847 ...
+# decode(12609531668580943872)  →  instance_id=42, sequence=0
+```
+
 ---
 
 ## What it is
@@ -83,6 +92,36 @@ gen2 = Id64.feistel(
 )
 ```
 
+### Why decode() matters
+
+In production, when an anomalous ID appears in a log or alert, you can decode it instantly — no DB lookup needed:
+
+```python
+meta = gen.decode(12609531668580943872)
+print(f"Issued by instance {meta.instance_id}, sequence #{meta.sequence}")
+# Issued by instance 42, sequence #0
+```
+
+This makes incident tracing dramatically faster: you immediately know which shard issued the ID and its approximate position in the issuance history.
+
+### Assigning instance_id
+
+Assign each process or deployment unit a distinct `instance_id`. Common patterns:
+
+```python
+import os
+
+# From environment variable (works in Docker / K8s)
+instance_id = int(os.environ.get("INSTANCE_ID", "0"))
+
+# From K8s StatefulSet pod name (e.g. "worker-3" -> 3)
+import re
+pod_name = os.environ.get("POD_NAME", "worker-0")
+instance_id = int(re.search(r"(\d+)$", pod_name).group(1))
+```
+
+Each `instance_id` gets its own independent sequence space — no coordination needed between shards.
+
 ---
 
 ## Installation
@@ -144,9 +183,9 @@ Sample output (Apple M2):
 
 ### Single-process only
 
-`PersistentCounterSource` is **not safe for concurrent use across multiple processes** sharing the same state file. If two processes both read and reserve from the same file simultaneously, duplicates can occur.
+`PersistentCounterSource` is **not safe for concurrent use across multiple processes** sharing the same state file. A best-effort `fcntl.flock` advisory lock is applied during block reservation on POSIX systems, but this is not a hard guarantee — do not rely on it as a substitute for proper shard isolation.
 
-To run multiple processes safely, assign each a **distinct `instance_id`** and a **distinct state file**. Multi-process coordination (file locking, central allocator) is planned for a future version.
+The correct pattern for multiple processes is to assign each a **distinct `instance_id`** and a **distinct state file**. Multi-process coordination via a central allocator is planned for v0.3.
 
 ### Feistel is obfuscation, not encryption
 
