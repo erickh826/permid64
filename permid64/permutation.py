@@ -7,7 +7,11 @@ Permutation64Protocol
     Structural protocol for any invertible 64-bit permutation.
     Implement ``forward`` and ``inverse`` to plug in a custom permutation.
 
-Two built-in implementations:
+Built-in implementations:
+
+IdentityPermutation
+    forward(x) == inverse(x) == x & MASK64.  Useful for tests and for
+    deployments that only want layout + encoding without bit mixing.
 
 MultiplyOddPermutation
     f(x) = (a·x + b) mod 2^64
@@ -52,6 +56,27 @@ class Permutation64Protocol(Protocol):
     def inverse(self, y: int) -> int:
         """Map y -> x, exactly reversing forward()."""
         ...
+
+
+# ---------------------------------------------------------------------------
+# Identity permutation
+# ---------------------------------------------------------------------------
+
+
+class IdentityPermutation:
+    """
+    Trivial bijection: ``forward`` and ``inverse`` both mask to 64 bits.
+
+    Skips statistical obfuscation; ``Id64`` still packs ``instance_id`` and
+    ``sequence`` via :class:`Layout64`.  Pair with string codecs when you only
+    need a short token, not hidden counter patterns.
+    """
+
+    def forward(self, x: int) -> int:
+        return x & MASK64
+
+    def inverse(self, y: int) -> int:
+        return y & MASK64
 
 
 # ---------------------------------------------------------------------------

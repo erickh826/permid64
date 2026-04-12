@@ -2,11 +2,28 @@
 test_permutation.py — Unit tests for MultiplyOddPermutation and Feistel64Permutation.
 """
 import pytest
-from permid64.permutation import Feistel64Permutation, MultiplyOddPermutation
+from permid64.permutation import (
+    Feistel64Permutation,
+    IdentityPermutation,
+    MultiplyOddPermutation,
+)
 
 MASK64 = 0xFFFFFFFFFFFFFFFF
 
 SAMPLE_VALUES = [0, 1, 42, 0xDEADBEEF, 0xFFFFFFFFFFFFFFFF, 123456789012345678]
+
+
+class TestIdentityPermutation:
+    def test_forward_inverse_are_identity_masked(self):
+        perm = IdentityPermutation()
+        for v in SAMPLE_VALUES:
+            assert perm.forward(v) == (v & MASK64)
+            assert perm.inverse(v) == (v & MASK64)
+
+    def test_roundtrip(self):
+        perm = IdentityPermutation()
+        for v in SAMPLE_VALUES:
+            assert perm.inverse(perm.forward(v)) == (v & MASK64)
 
 
 class TestMultiplyOddPermutation:
