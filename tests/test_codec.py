@@ -75,6 +75,17 @@ def test_crockford32_lowercase_rejected():
         crockford32_to_u64("000000000000f")
 
 
+def test_crockford32_overflow_token():
+    """
+    32^13 = 2^65 > 2^64 - 1.
+    The maximum 13-char Crockford string 'ZZZZZZZZZZZZZ' decodes to
+    32^13 - 1 which exceeds the 64-bit range and must raise.
+    """
+    token = "Z" * 13  # all max symbols: 32^13 - 1 ≈ 3.6 × 10^19 > 2^64 - 1
+    with pytest.raises(ValueError, match="overflow"):
+        crockford32_to_u64(token)
+
+
 def test_u64_type_errors():
     with pytest.raises(TypeError):
         u64_to_base62("1")  # type: ignore[arg-type]

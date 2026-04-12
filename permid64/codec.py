@@ -86,6 +86,8 @@ def crockford32_to_u64(s: str) -> int:
         if c not in _CROCKFORD32_INDEX:
             raise ValueError(f"invalid Crockford Base32 character: {c!r}")
         v = v * 32 + _CROCKFORD32_INDEX[c]
+        # 32^13 = 2^65 > 2^64, so certain 13-char strings are out of range.
+        # Check after each step so we fail fast on the first overflowing digit.
         if v > MASK64:
             raise ValueError("Crockford Base32 value overflows unsigned 64-bit range")
     return v

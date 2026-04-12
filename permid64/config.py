@@ -4,6 +4,14 @@ config.py — Serializable generator configuration (experimental in v0.2).
 ``Id64Config`` + :func:`build_id64` round-trip to a plain ``dict`` for docs,
 CLI prototypes, and config files.  They do **not** replace careful key
 management in production.
+
+.. note::
+    ``build_id64`` currently hard-codes a dispatch table over the three
+    built-in permutation kinds (``"multiplicative"``, ``"feistel"``,
+    ``"identity"``).
+    v0.3 will replace this with a **registry pattern** so that third-party
+    permutation implementations can be registered and resolved by name
+    without modifying this module.
 """
 from __future__ import annotations
 
@@ -22,7 +30,7 @@ _DEFAULT_B = 0x6A09E667F3BCC909
 _DEFAULT_KEY = 0xDEADBEEFCAFEBABE
 
 
-@dataclass
+@dataclass(frozen=True)
 class Id64Config:
     """
     Parameters describing how to build an :class:`Id64`.
@@ -82,6 +90,11 @@ def build_id64(cfg: Id64Config) -> Id64:
     if cfg.kind == "multiplicative":
         a = _DEFAULT_A if cfg.a is None else cfg.a
         b = _DEFAULT_B if cfg.b is None else cfg.b
+        if a % 2 == 0:
+            raise ValueError(
+                f"Id64Config.a must be odd for multiplicative permutation, got {a:#x}. "
+                "Choose an odd constant (e.g. the default 0x9E3779B185EBCA87)."
+            )
         return Id64(
             cfg.instance_id,
             source,

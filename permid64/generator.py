@@ -153,20 +153,33 @@ class Id64:
         return self.layout.decompose(raw)
 
     def next_base62(self) -> str:
-        """Return :func:`next_u64` encoded as an 11-character Base62 string."""
+        """
+        Return :meth:`next_u64` encoded as a fixed-width 11-character Base62
+        string (alphabet ``0-9A-Za-z``, case-sensitive).
+
+        .. note::
+            v0.2 exposes one method per encoding (``next_base62``,
+            ``next_base32``).  A future version may unify these behind an
+            ``encoding=`` parameter if the number of supported codecs grows.
+        """
         return u64_to_base62(self.next_u64())
 
     def decode_base62(self, token: str) -> DecodedId:
-        """Decode a Base62 token from :meth:`next_base62` or matching ``u64_to_base62`` output."""
+        """Decode a Base62 token produced by :meth:`next_base62`."""
         return self.decode(base62_to_u64(token))
 
     def next_base32(self) -> str:
         """
-        Return ``next_u64`` encoded as a 13-character **Crockford** Base32 string
-        (uppercase, no I/L/O/U).
+        Return :meth:`next_u64` encoded as a fixed-width 13-character
+        **Crockford Base32** string (uppercase, no I/L/O/U).
+
+        .. note::
+            v0.2 exposes one method per encoding (``next_base62``,
+            ``next_base32``).  A future version may unify these behind an
+            ``encoding=`` parameter if the number of supported codecs grows.
         """
         return u64_to_crockford32(self.next_u64())
 
     def decode_base32(self, token: str) -> DecodedId:
-        """Decode a Crockford Base32 token from :meth:`next_base32`."""
+        """Decode a Crockford Base32 token produced by :meth:`next_base32`."""
         return self.decode(crockford32_to_u64(token))
