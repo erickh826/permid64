@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "id64"
+version = "0.1.0"
+description = "Clock-free, persistent, obfuscated 64-bit ID generation"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+keywords = ["id", "uuid", "snowflake", "unique-id", "feistel", "counter"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries",
+]
+dependencies = []  # zero runtime dependencies
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-xdist",   # parallel test execution
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["id64*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v"
