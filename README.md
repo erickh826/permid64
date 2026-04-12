@@ -247,7 +247,7 @@ Sample output (Apple M2):
 
 `PersistentCounterSource` is **not safe for concurrent use across multiple processes** sharing the same state file. A best-effort `fcntl.flock` advisory lock is applied during block reservation on POSIX systems, but this is not a hard guarantee — do not rely on it as a substitute for proper shard isolation.
 
-The correct pattern for multiple processes is to assign each a **distinct `instance_id`** and a **distinct state file**. Multi-process coordination via a central allocator is planned for v0.3.
+The correct pattern for multiple processes is to assign each a **distinct `instance_id`** and a **distinct state file**. Multi-process file locking is planned for v0.4, and a central block allocator (`ReservedBlockSource`) is planned for v0.5.
 
 ### Feistel is obfuscation, not encryption
 
@@ -292,12 +292,16 @@ benchmarks/
 
 ## Roadmap
 
-| Version | Focus |
-|---|---|
-| v0.1 | Core: counter + permutation + decode |
-| v0.2 (current) | `IdentityPermutation`, fixed-width Base62 + Crockford Base32 (`next_base62` / `decode_base62`, `next_base32` / `decode_base32`), `Id64Config` + `build_id64` |
-| v0.3 | Multi-process file locking, `ReservedBlockSource` (central allocator) |
-| v0.4+ | Rust/Go reference implementations, formal cross-language spec |
+| Version | Theme | What's included | Status |
+|---|---|---|---|
+| **v0.1** | Core primitives | `PersistentCounterSource`, Feistel / Multiplicative permutation, `decode()` | ✅ Released |
+| **v0.2** | Encoding & Config | `IdentityPermutation`, fixed-width Base62 + Crockford Base32 (`next_base62` / `decode_base62`, `next_base32` / `decode_base32`), `Id64Config` + `build_id64` | ✅ Released |
+| **v0.3** | Human-friendly output | Check digit (+1 char checksum), `PrefixedEncoder` (`ORD_` / `TKT_` / …), `FormatSpec` (segmented display, ambiguity-free charset) | 🔜 Next |
+| **v0.4** | Multi-process safety | File locking (`fcntl` / `msvcrt`), single-machine multi-process guarantee (gunicorn / prefork) | Planned |
+| **v0.5** | Distributed source | `ReservedBlockSource` (Redis / PG block rental), `instance_id` helpers (hostname hash, env var, StatefulSet ordinal) | Planned |
+| **v0.6** | Solution presets | `OrderIdGenerator`, `TicketIdGenerator`, `CorrelationIdGenerator`, `IoTEventIdGenerator` — ready-made recipes for common use cases | Planned |
+| **v0.7** | Formal spec | Cross-language bit-layout specification, profile aliases (`m1` / `f6` / `human32`), compatibility guarantee document | Planned |
+| **v1.0** | Reference impls | Go reference implementation, Rust reference implementation, three-language cross-decode test suite | Planned |
 
 ---
 
