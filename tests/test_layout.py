@@ -2,7 +2,7 @@
 test_layout.py — Unit tests for Layout64.
 """
 import pytest
-from id64.layout import Layout64
+from permid64.layout import Layout64
 
 
 class TestLayout64:

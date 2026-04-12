@@ -11,7 +11,7 @@ Covers the five MVP acceptance criteria:
 import threading
 
 import pytest
-from id64 import Id64
+from permid64 import Id64
 
 
 @pytest.fixture
@@ -62,7 +62,7 @@ def test_invertibility(state_file, factory):
         meta = gen.decode(uid)
         assert meta.instance_id == 1
         # Re-encode and check we get back the same id
-        from id64.layout import Layout64
+        from permid64.layout import Layout64
         layout = Layout64()
         reencoded = gen.permutation.forward(layout.compose(meta.instance_id, meta.sequence))
         assert reencoded == uid

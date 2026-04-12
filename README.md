@@ -1,20 +1,26 @@
-# id64
+# permid64
 
-**Clock-free, persistent, obfuscated 64-bit ID generation.**
+**Clock-free, persistent, reversible-permutation 64-bit ID generation.**
 
-id64 generates globally unique 64-bit integer IDs without relying on wall-clock time. It combines a crash-safe persistent counter with an invertible permutation to produce IDs that look random but carry recoverable metadata.
+> *Counter in, permutation out.*
+
+permid64 generates unique 64-bit integer IDs without relying on wall-clock time. It combines a crash-safe persistent counter with an invertible permutation to produce IDs that look random but carry recoverable metadata.
 
 ---
 
-## Why id64?
+## What it is
 
-| Problem | id64's answer |
-|---|---|
-| Clock skew / NTP jumps break time-based IDs | Counter, not clock |
-| IDs must survive process restarts | State file with block reservation |
-| Monotonic counters leak business volume | Permutation hides raw counter |
-| IDs must be decodable (audit, debug) | `decode()` reverses the permutation |
-| No infrastructure dependency | Pure Python, zero runtime deps |
+- A **clock-free** 64-bit ID generator — no timestamp, no NTP dependency
+- IDs are **unique** because the source is a monotonically increasing counter
+- IDs **look shuffled** because they pass through a reversible permutation
+- The permutation is **invertible** — `decode()` recovers the original metadata
+
+## What it is not
+
+- **Not a timestamp-based scheme** — there is no time component in the ID
+- **Not a UUID replacement for every scenario** — if you need a globally unique random token with no infrastructure at all, UUID v4 is simpler
+- **Not cryptographic encryption** — the permutation is an obfuscation layer, not authenticated encryption; do not use IDs as secrets or security tokens
+- **Not safe for multiple processes sharing one state file** — `PersistentCounterSource` is single-process only; concurrent writes from multiple processes to the same state file will cause duplicates (see [Limitations](#limitations))
 
 ---
 
@@ -53,23 +59,24 @@ id64 = permutation.forward(raw)         # obfuscate with invertible bijection
 ## Quick start
 
 ```python
-from id64 import Id64
+from permid64 import Id64
 
 # Multiplicative (fastest)
 gen = Id64.multiplicative(
     instance_id=42,
-    state_file="id64.state",
+    state_file="permid64.state",
     block_size=4096,
 )
 
 uid = gen.next_u64()          # e.g. 12609531668580943872
 meta = gen.decode(uid)
 # DecodedId(raw=2748779069440, instance_id=42, sequence=0)
+print(meta.instance_id, meta.sequence)
 
 # Feistel (better statistical mixing)
 gen2 = Id64.feistel(
     instance_id=42,
-    state_file="id64.state",
+    state_file="permid64.state",
     block_size=4096,
     key=0xDEADBEEFCAFEBABE,
     rounds=6,
@@ -81,7 +88,7 @@ gen2 = Id64.feistel(
 ## Installation
 
 ```bash
-pip install id64          # once published to PyPI
+pip install permid64          # once published to PyPI
 # or from source:
 pip install -e ".[dev]"
 ```
@@ -121,27 +128,44 @@ Sample output (Apple M2):
 
 ---
 
-## Guarantees & limitations
+## Guarantees
 
 | Guarantee | Notes |
 |---|---|
-| No duplicates within a shard | Strict |
-| No duplicates across restarts | Strict (state file must be on durable storage) |
-| Decodable | Only with the same permutation key/params |
+| No duplicate IDs within a shard | Strict |
+| No duplicates across restarts | Strict — state file must be on durable storage |
+| Decodable | Only with the same permutation key / params |
 | Gaps allowed | After a crash, some sequence numbers are skipped |
-| No global coordination | Each `instance_id` is independent |
+| No global coordination | Each `instance_id` is fully independent |
 
-**Limitations:**
-- Not cryptographically secure (IDs should not be used as secrets).
-- State file must be on local or reliably flushed storage; NFS is risky.
-- Cross-shard uniqueness requires you to assign distinct `instance_id` values.
+---
+
+## Limitations
+
+### Single-process only
+
+`PersistentCounterSource` is **not safe for concurrent use across multiple processes** sharing the same state file. If two processes both read and reserve from the same file simultaneously, duplicates can occur.
+
+To run multiple processes safely, assign each a **distinct `instance_id`** and a **distinct state file**. Multi-process coordination (file locking, central allocator) is planned for a future version.
+
+### Feistel is obfuscation, not encryption
+
+The Feistel permutation provides strong mixing and is reversible, but it is not a formally audited cryptographic primitive. Do not rely on it for access control, token authentication, or any security-sensitive use case.
+
+### instance_id must be assigned manually
+
+There is no automatic shard coordination. Assign `instance_id` values via config or environment variables and ensure they are unique across your deployment.
+
+### Sequence space is large but finite
+
+The default 48-bit sequence space supports ~281 trillion IDs per shard. This is enough for virtually all workloads, but it is not infinite.
 
 ---
 
 ## Architecture
 
 ```
-id64/
+permid64/
   __init__.py       # public exports: Id64, DecodedId
   generator.py      # Id64 façade
   source.py         # PersistentCounterSource
@@ -158,6 +182,17 @@ tests/
 benchmarks/
   bench_id64.py
 ```
+
+---
+
+## Roadmap
+
+| Version | Focus |
+|---|---|
+| v0.1 (current) | Core: counter + permutation + decode |
+| v0.2 | `IdentityPermutation`, Base32/Base62 encoding, `Id64Config` |
+| v0.3 | Multi-process file locking, `ReservedBlockSource` (central allocator) |
+| v0.4+ | Rust/Go reference implementations, formal cross-language spec |
 
 ---
 

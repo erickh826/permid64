@@ -12,7 +12,7 @@ import threading
 from pathlib import Path
 
 import pytest
-from id64.source import PersistentCounterSource
+from permid64.source import PersistentCounterSource
 
 
 @pytest.fixture

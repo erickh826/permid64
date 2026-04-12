@@ -2,7 +2,7 @@
 test_permutation.py — Unit tests for MultiplyOddPermutation and Feistel64Permutation.
 """
 import pytest
-from id64.permutation import Feistel64Permutation, MultiplyOddPermutation
+from permid64.permutation import Feistel64Permutation, MultiplyOddPermutation
 
 MASK64 = 0xFFFFFFFFFFFFFFFF
 

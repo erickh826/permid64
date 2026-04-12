@@ -12,7 +12,7 @@ from __future__ import annotations
 import time
 import tempfile
 import os
-from id64 import Id64
+from permid64 import Id64
 
 WARMUP = 1_000
 ITERATIONS = 1_000_000

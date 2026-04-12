@@ -3,13 +3,13 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "id64"
+name = "permid64"
 version = "0.1.0"
-description = "Clock-free, persistent, obfuscated 64-bit ID generation"
+description = "Clock-free, persistent, reversible-permutation 64-bit ID generation"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.11"
-keywords = ["id", "uuid", "snowflake", "unique-id", "feistel", "counter"]
+keywords = ["id", "uuid", "unique-id", "feistel", "permutation", "counter", "clock-free"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -29,7 +29,7 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["id64*"]
+include = ["permid64*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
