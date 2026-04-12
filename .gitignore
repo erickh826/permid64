@@ -9,3 +9,4 @@ venv/
 *.tmp
 .pytest_cache/
 .DS_Store
+.hypothesis/
