@@ -1,5 +1,11 @@
 # permid64
 
+[![CI](https://github.com/erickh826/permid64/actions/workflows/test.yml/badge.svg)](https://github.com/erickh826/permid64/actions/workflows/test.yml)
+[![PyPI version](https://img.shields.io/pypi/v/permid64)](https://pypi.org/project/permid64/)
+[![Python versions](https://img.shields.io/pypi/pyversions/permid64)](https://pypi.org/project/permid64/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Zero Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](https://pypi.org/project/permid64/)
+
 **Clock-free, persistent, reversible-permutation 64-bit ID generation.**
 
 > *Counter in, permutation out.*
@@ -14,6 +20,33 @@ permid64 generates unique 64-bit integer IDs without relying on wall-clock time.
 12609531668580943872, 7349201938475629, 3847291038012847 ...
 # decode(12609531668580943872)  →  instance_id=42, sequence=0
 ```
+
+---
+
+## Why permid64?
+
+| Problem | permid64's answer |
+|---|---|
+| Clock skew / NTP jumps break time-based IDs | Counter, not clock |
+| Monotonic counters leak business volume | Permutation hides raw counter |
+| IDs must survive process restarts | State file with block reservation |
+| IDs must be decodable (audit, debug) | `decode()` reverses the permutation |
+| No infrastructure dependency | Pure Python, **zero runtime deps** |
+
+---
+
+## permid64 vs Snowflake vs UUID
+
+| | permid64 | Snowflake ID | UUID v4 |
+|---|---|---|---|
+| **Bit width** | 64 | 64 | 128 |
+| **Core dependency** | Persistent counter (file) | System clock (NTP) | Random source |
+| **Clock rollback risk** | None | High | None |
+| **External appearance** | Shuffled (random-looking) | Roughly increasing | Random |
+| **DB index friendliness** | Moderate (random writes) | Excellent (sequential) | Poor (random writes) |
+| **Decodable** | Yes (`instance_id` + `sequence`) | Yes (`timestamp` + `worker_id`) | No |
+| **Infrastructure needed** | Local durable storage | Worker ID coordination (ZK/etcd) | None |
+| **Best for** | External-facing IDs, anti-scraping | Internal logs, time-ordered streams | Globally unique tokens |
 
 ---
 
@@ -33,35 +66,17 @@ permid64 generates unique 64-bit integer IDs without relying on wall-clock time.
 
 ---
 
-## Design
+## Installation
 
-```
-seq  = source.next()                    # monotonic counter (persistent)
-raw  = layout.compose(instance_id, seq) # pack 16-bit shard + 48-bit seq
-id64 = permutation.forward(raw)         # obfuscate with invertible bijection
+```bash
+pip install permid64
 ```
 
-**Layout** — default 64-bit split:
+For development (tests, linting, type checking):
 
+```bash
+pip install -e ".[dev]"
 ```
-[ instance_id : 16 bits ][ sequence : 48 bits ]
-```
-
-- Up to **65 535** independent shards
-- Up to **281 trillion** IDs per shard
-
-**Permutations** — both are bijections over `[0, 2^64)`:
-
-| Mode | Formula | Speed | Mixing |
-|---|---|---|---|
-| `multiplicative` | `f(x) = (a·x + b) mod 2^64` | ~500 M/s | Good |
-| `feistel` | 64-bit Feistel network | ~150 M/s | Excellent |
-
-**Persistence** — block reservation strategy:
-1. On startup, read high-water mark from state file.
-2. Reserve a block of N sequence numbers, write new high-water mark.
-3. Serve IDs from memory until block exhausted.
-4. If the process crashes, the unused block is lost (gap), but **no duplicate is ever issued**.
 
 ---
 
@@ -124,13 +139,35 @@ Each `instance_id` gets its own independent sequence space — no coordination n
 
 ---
 
-## Installation
+## Design
 
-```bash
-pip install permid64          # once published to PyPI
-# or from source:
-pip install -e ".[dev]"
 ```
+seq  = source.next()                    # monotonic counter (persistent)
+raw  = layout.compose(instance_id, seq) # pack 16-bit shard + 48-bit seq
+id64 = permutation.forward(raw)         # obfuscate with invertible bijection
+```
+
+**Layout** — default 64-bit split:
+
+```
+[ instance_id : 16 bits ][ sequence : 48 bits ]
+```
+
+- Up to **65 535** independent shards
+- Up to **281 trillion** IDs per shard
+
+**Permutations** — both are bijections over `[0, 2^64)`:
+
+| Mode | Formula | Speed | Mixing |
+|---|---|---|---|
+| `multiplicative` | `f(x) = (a·x + b) mod 2^64` | ~500 M/s | Good |
+| `feistel` | 64-bit Feistel network | ~150 M/s | Excellent |
+
+**Persistence** — block reservation strategy:
+1. On startup, read high-water mark from state file.
+2. Reserve a block of N sequence numbers, write new high-water mark.
+3. Serve IDs from memory until block exhausted.
+4. If the process crashes, the unused block is lost (gap), but **no duplicate is ever issued**.
 
 ---
 
@@ -232,6 +269,24 @@ benchmarks/
 | v0.2 | `IdentityPermutation`, Base32/Base62 encoding, `Id64Config` |
 | v0.3 | Multi-process file locking, `ReservedBlockSource` (central allocator) |
 | v0.4+ | Rust/Go reference implementations, formal cross-language spec |
+
+---
+
+## Contributing
+
+Contributions are welcome! Please open an issue first to discuss what you'd like to change.
+
+```bash
+# Clone and set up dev environment
+git clone https://github.com/erickh826/permid64.git
+cd permid64
+pip install -e ".[dev]"
+
+# Run checks before submitting a PR
+pytest tests/ -v
+ruff check permid64/ tests/
+mypy permid64/ --ignore-missing-imports
+```
 
 ---
 
