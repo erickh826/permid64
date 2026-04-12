@@ -12,6 +12,7 @@ import threading
 
 import pytest
 from permid64 import Id64
+from permid64.codec import base62_to_u64, crockford32_to_u64
 
 
 @pytest.fixture
@@ -145,3 +146,21 @@ def test_decode_sequence_is_monotonic(state_file):
     metas = [gen.decode(gen.next_u64()) for _ in range(100)]
     seqs = [m.sequence for m in metas]
     assert seqs == sorted(seqs), "Sequences are not monotonically increasing"
+
+
+@pytest.mark.parametrize("factory", [make_multiplicative, make_feistel])
+def test_base62_token_roundtrip_matches_decode_u64(state_file, factory):
+    gen = factory(state_file)
+    tok = gen.next_base62()
+    meta_tok = gen.decode_base62(tok)
+    meta_int = gen.decode(base62_to_u64(tok))
+    assert meta_tok == meta_int
+
+
+@pytest.mark.parametrize("factory", [make_multiplicative, make_feistel])
+def test_base32_token_roundtrip_matches_decode_u64(state_file, factory):
+    gen = factory(state_file)
+    tok = gen.next_base32()
+    meta_tok = gen.decode_base32(tok)
+    meta_int = gen.decode(crockford32_to_u64(tok))
+    assert meta_tok == meta_int

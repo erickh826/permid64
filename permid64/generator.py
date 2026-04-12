@@ -23,11 +23,24 @@ Usage
 
     id_val = gen.next_u64()      # -> int  (unsigned 64-bit)
     meta   = gen.decode(id_val)  # -> DecodedId(raw, instance_id, sequence)
+
+    # Fixed-width string tokens (same integer space as next_u64)
+    tok = gen.next_base62()
+    meta2 = gen.decode_base62(tok)
+
+    # No permutation — layout + counter only (see IdentityPermutation)
+    gen_plain = Id64.identity(instance_id=42, state_file="plain.state")
 """
 from __future__ import annotations
 
+from .codec import base62_to_u64, crockford32_to_u64, u64_to_base62, u64_to_crockford32
 from .layout import Layout64
-from .permutation import Feistel64Permutation, MultiplyOddPermutation, Permutation64Protocol
+from .permutation import (
+    Feistel64Permutation,
+    IdentityPermutation,
+    MultiplyOddPermutation,
+    Permutation64Protocol,
+)
 from .source import PersistentCounterSource
 from .types import DecodedId
 
@@ -106,6 +119,24 @@ class Id64:
             permutation=Feistel64Permutation(key=key, rounds=rounds),
         )
 
+    @classmethod
+    def identity(
+        cls,
+        instance_id: int,
+        state_file: str,
+        block_size: int = 4096,
+    ) -> "Id64":
+        """
+        Create a generator with no bit mixing — ``forward`` / ``inverse`` are
+        identity maps on 64 bits.  Counter + :class:`Layout64` only; useful
+        for tests or when obfuscation is not required.
+        """
+        return cls(
+            instance_id=instance_id,
+            source=PersistentCounterSource(state_file, block_size),
+            permutation=IdentityPermutation(),
+        )
+
     # ------------------------------------------------------------------
     # Core API
     # ------------------------------------------------------------------
@@ -120,3 +151,35 @@ class Id64:
         """Reverse a previously generated ID back to its metadata."""
         raw = self.permutation.inverse(id64)
         return self.layout.decompose(raw)
+
+    def next_base62(self) -> str:
+        """
+        Return :meth:`next_u64` encoded as a fixed-width 11-character Base62
+        string (alphabet ``0-9A-Za-z``, case-sensitive).
+
+        .. note::
+            v0.2 exposes one method per encoding (``next_base62``,
+            ``next_base32``).  A future version may unify these behind an
+            ``encoding=`` parameter if the number of supported codecs grows.
+        """
+        return u64_to_base62(self.next_u64())
+
+    def decode_base62(self, token: str) -> DecodedId:
+        """Decode a Base62 token produced by :meth:`next_base62`."""
+        return self.decode(base62_to_u64(token))
+
+    def next_base32(self) -> str:
+        """
+        Return :meth:`next_u64` encoded as a fixed-width 13-character
+        **Crockford Base32** string (uppercase, no I/L/O/U).
+
+        .. note::
+            v0.2 exposes one method per encoding (``next_base62``,
+            ``next_base32``).  A future version may unify these behind an
+            ``encoding=`` parameter if the number of supported codecs grows.
+        """
+        return u64_to_crockford32(self.next_u64())
+
+    def decode_base32(self, token: str) -> DecodedId:
+        """Decode a Crockford Base32 token produced by :meth:`next_base32`."""
+        return self.decode(crockford32_to_u64(token))

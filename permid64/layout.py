@@ -4,9 +4,8 @@ layout.py — Pack / unpack instance_id + sequence into a single 64-bit integer.
 Default split: 16 bits for instance_id  (up to 65 535 shards)
                48 bits for sequence      (up to 281 trillion IDs per shard)
 """
+from ._constants import MASK64
 from .types import DecodedId
-
-MASK64 = 0xFFFFFFFFFFFFFFFF
 
 
 class Layout64:

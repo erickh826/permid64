@@ -107,6 +107,31 @@ gen2 = Id64.feistel(
 )
 ```
 
+### String tokens (Base62 and Crockford Base32)
+
+For order numbers, invite codes, and shareable URLs, fixed-width alphanumeric tokens are easier to read than a 19-digit decimal. They encode the **same** `next_u64()` value — no second ID space.
+
+```python
+# 11 chars: 0-9, A-Z, a-z (case-sensitive in URLs and logs)
+token = gen.next_base62()
+meta = gen.decode_base62(token)
+
+# 13 chars: Crockford Base32 (uppercase only; excludes I, L, O, U)
+tok32 = gen.next_base32()
+meta = gen.decode_base32(tok32)
+```
+
+Stateless integer codecs (for storage or custom pipelines):
+
+```python
+from permid64 import u64_to_base62, base62_to_u64
+
+s = u64_to_base62(12345678901234567890)
+n = base62_to_u64(s)
+```
+
+Strings are **not** secrets: anyone who knows the alphabet and (for `decode`) the same permutation parameters can map tokens back to integers and metadata.
+
 ### Why decode() matters
 
 In production, when an anomalous ID appears in a log or alert, you can decode it instantly — no DB lookup needed:
@@ -242,17 +267,21 @@ The default 48-bit sequence space supports ~281 trillion IDs per shard. This is 
 
 ```
 permid64/
-  __init__.py       # public exports: Id64, DecodedId
+  __init__.py       # public exports: Id64, DecodedId, codecs, Id64Config, …
   generator.py      # Id64 façade
   source.py         # PersistentCounterSource
   layout.py         # Layout64 — pack/unpack 64-bit raw value
-  permutation.py    # MultiplyOddPermutation, Feistel64Permutation
+  permutation.py    # MultiplyOddPermutation, Feistel64Permutation, IdentityPermutation
+  codec.py          # fixed-width Base62 / Crockford Base32 for u64
+  config.py         # Id64Config + build_id64 (experimental)
   types.py          # DecodedId dataclass
 
 tests/
   test_counter.py
   test_layout.py
   test_permutation.py
+  test_codec.py
+  test_config.py
   test_id64_e2e.py   # the 5 MVP acceptance tests
 
 benchmarks/
@@ -265,8 +294,8 @@ benchmarks/
 
 | Version | Focus |
 |---|---|
-| v0.1 (current) | Core: counter + permutation + decode |
-| v0.2 | `IdentityPermutation`, Base32/Base62 encoding, `Id64Config` |
+| v0.1 | Core: counter + permutation + decode |
+| v0.2 (current) | `IdentityPermutation`, fixed-width Base62 + Crockford Base32 (`next_base62` / `decode_base62`, `next_base32` / `decode_base32`), `Id64Config` + `build_id64` |
 | v0.3 | Multi-process file locking, `ReservedBlockSource` (central allocator) |
 | v0.4+ | Rust/Go reference implementations, formal cross-language spec |
 
