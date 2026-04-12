@@ -12,11 +12,16 @@ Default alphabet: ``0-9``, ``A-Z``, ``a-z`` (62 symbols).  Output is always
 Crockford Base32
 ----------------
 Alphabet ``0123456789ABCDEFGHJKMNPQRSTVWXYZ`` (no I, L, O, U).  Output is
-always 13 uppercase characters.  Decoding accepts only that alphabet (strict).
+always 13 uppercase characters.
+
+Decoding is strict by default (``strict=True``): only uppercase alphabet
+characters are accepted.  Pass ``strict=False`` for spec-compliant lenient
+mode: input is uppercased before decoding and the Crockford substitutions
+``I``/``L`` -> ``1`` and ``O`` -> ``0`` are applied automatically.
 """
 from __future__ import annotations
 
-MASK64 = 0xFFFFFFFFFFFFFFFF
+from ._constants import MASK64
 
 # 0-9, A-Z, a-z — fixed order for stable encoding
 _BASE62_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
@@ -73,10 +78,28 @@ def u64_to_crockford32(n: int) -> str:
     return "".join(reversed(digits))
 
 
-def crockford32_to_u64(s: str) -> int:
-    """Decode a Crockford Base32 string produced by :func:`u64_to_crockford32`."""
+# Crockford substitution map for lenient decoding (I/L -> 1, O -> 0)
+_CROCKFORD32_SUBSTITUTIONS = str.maketrans("IiLlOo", "111100")
+
+
+def crockford32_to_u64(s: str, *, strict: bool = True) -> int:
+    """
+    Decode a Crockford Base32 string to an unsigned 64-bit integer.
+
+    Parameters
+    ----------
+    s:
+        The token to decode.  Must be exactly 13 characters.
+    strict:
+        If ``True`` (default), only characters in the uppercase Crockford
+        alphabet are accepted.  If ``False``, the full Crockford spec is
+        applied: input is uppercased first, and ``I``/``L`` are treated as
+        ``1`` while ``O`` is treated as ``0`` before decoding.
+    """
     if not isinstance(s, str):
         raise TypeError(f"s must be str, got {type(s).__name__}")
+    if not strict:
+        s = s.upper().translate(_CROCKFORD32_SUBSTITUTIONS)
     if len(s) != _CROCKFORD32_WIDTH:
         raise ValueError(
             f"Crockford Base32 token must be length {_CROCKFORD32_WIDTH}, got {len(s)}"

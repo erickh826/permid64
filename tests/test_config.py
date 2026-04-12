@@ -62,11 +62,10 @@ def test_build_id64_feistel_matches_factory(tmp_path):
 
 
 def test_build_id64_custom_layout(tmp_path):
-    p = str(tmp_path / "e.state")
     cfg = Id64Config(
         kind="identity",
         instance_id=1,
-        state_file=p,
+        state_file=str(tmp_path / "e.state"),
         instance_bits=8,
         sequence_bits=56,
     )
@@ -75,3 +74,38 @@ def test_build_id64_custom_layout(tmp_path):
     meta = g.decode(uid)
     assert meta.instance_id == 1
     assert meta.sequence == 0
+
+
+def test_from_dict_rejects_negative_instance_id():
+    with pytest.raises(ValueError, match="out of range"):
+        Id64Config.from_dict(
+            {"kind": "multiplicative", "instance_id": -1, "state_file": "x"}
+        )
+
+
+def test_from_dict_rejects_oversized_instance_id():
+    """instance_id >= 2^16 is out of range for default 16-bit layout."""
+    with pytest.raises(ValueError, match="out of range"):
+        Id64Config.from_dict(
+            {"kind": "multiplicative", "instance_id": 65536, "state_file": "x"}
+        )
+
+
+def test_repr_redacts_secrets():
+    cfg = Id64Config(
+        kind="feistel",
+        instance_id=1,
+        state_file="x.state",
+        key=0xDEADBEEFCAFEBABE,
+    )
+    r = repr(cfg)
+    assert "DEADBEEF" not in r.upper()
+    assert "<redacted>" in r
+    assert "instance_id=1" in r
+    assert "kind='feistel'" in r
+
+
+def test_repr_shows_none_for_unset_secrets():
+    cfg = Id64Config(kind="identity", instance_id=0, state_file="x")
+    r = repr(cfg)
+    assert "None" in r  # unset key/a/b shown as None, not <redacted>

@@ -28,8 +28,7 @@ from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
 
-MASK64 = 0xFFFFFFFFFFFFFFFF
-MASK32 = 0xFFFFFFFF
+from ._constants import MASK32, MASK64
 
 
 @runtime_checkable

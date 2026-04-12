@@ -70,9 +70,25 @@ def test_crockford32_invalid_char():
         crockford32_to_u64("000000000000I")
 
 
-def test_crockford32_lowercase_rejected():
+def test_crockford32_lowercase_rejected_strict():
+    """Default strict=True rejects lowercase input."""
     with pytest.raises(ValueError):
         crockford32_to_u64("000000000000f")
+
+
+def test_crockford32_lenient_accepts_lowercase():
+    """strict=False normalises to uppercase per Crockford spec."""
+    s = u64_to_crockford32(42)
+    assert crockford32_to_u64(s.lower(), strict=False) == 42
+
+
+def test_crockford32_lenient_substitutes_i_l_o():
+    """strict=False maps I/L -> 1, O -> 0 per Crockford spec."""
+    # Build a token and manually replace characters with spec-legal substitutes
+    s = u64_to_crockford32(0)
+    # s is all '0's; replace first char with 'O' (Crockford substitute for 0)
+    lenient_s = "O" + s[1:]
+    assert crockford32_to_u64(lenient_s, strict=False) == 0
 
 
 def test_crockford32_overflow_token():
