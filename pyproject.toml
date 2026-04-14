@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "permid64"
-version = "0.2.0"
+version = "0.3.0"
 description = "Clock-free, persistent, reversible-permutation 64-bit ID generation"
 readme = "README.md"
 license = { text = "MIT" }

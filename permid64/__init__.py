@@ -14,8 +14,10 @@ Public API
 """
 from .codec import base62_to_u64, crockford32_to_u64, u64_to_base62, u64_to_crockford32
 from .config import Id64Config, build_id64
+from .exceptions import PermId64ConfigError
 from .generator import Id64
 from .permutation import IdentityPermutation, Permutation64Protocol
+from .source import PersistentCounterSource, ProcessSafeCounterSource
 from .types import DecodedId
 
 __all__ = [
@@ -29,5 +31,8 @@ __all__ = [
     "base62_to_u64",
     "u64_to_crockford32",
     "crockford32_to_u64",
+    "ProcessSafeCounterSource",
+    "PersistentCounterSource",
+    "PermId64ConfigError",
 ]
-__version__ = "0.2.0"
+__version__ = "0.3.0"
