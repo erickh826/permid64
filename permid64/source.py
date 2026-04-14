@@ -380,10 +380,16 @@ class ProcessSafeCounterSource:
     def next(self) -> int:
         """Return the next unique sequence number (thread- and process-safe)."""
         with self._thread_lock:
-            # Fork-safety: if we are in a child process, the inherited in-memory
-            # block is shared with the parent, so we must discard it and reserve
-            # a fresh block from disk.  We detect this by comparing our recorded
-            # PID to the current PID.
+            # PID check MUST live here, not in _reserve_block().
+            #
+            # If a child inherits a live block (_next < _limit), _reserve_block()
+            # is never called — the child would silently serve IDs from the same
+            # block as the parent, producing duplicates.  Invalidating the block
+            # here forces a fresh reservation on the very first next() call in
+            # any forked child, regardless of how full the inherited block was.
+            #
+            # Do NOT move this check into _reserve_block() as an "obvious
+            # simplification" — doing so re-introduces the fork-mid-block bug.
             if self._pid != os.getpid():
                 self._next = self._limit  # invalidate inherited block
             if self._next >= self._limit:
