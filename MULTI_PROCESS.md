@@ -17,7 +17,7 @@ src = ProcessSafeCounterSource("/var/lib/myapp/counter.state", block_size=256)
 ## How it works
 
 | Mechanism | Purpose |
-|-----------|---------|
+|---|---|
 | `fcntl.lockf` (OFD lock, POSIX) | Serialises block reservations across processes |
 | `threading.Lock` | Serialises within a single process across threads |
 | Sidecar `.lock` file | Holds the lock; separate from the state file to avoid contention with the atomic rename |

@@ -62,7 +62,7 @@ permid64 generates unique 64-bit integer IDs without relying on wall-clock time.
 - **Not a timestamp-based scheme** — there is no time component in the ID
 - **Not a UUID replacement for every scenario** — if you need a globally unique random token with no infrastructure at all, UUID v4 is simpler
 - **Not cryptographic encryption** — the permutation is an obfuscation layer, not authenticated encryption; do not use IDs as secrets or security tokens
-- **Not safe for multiple processes sharing one state file** — `PersistentCounterSource` is single-process only; concurrent writes from multiple processes to the same state file will cause duplicates (see [Limitations](#limitations))
+- **`PersistentCounterSource` is single-process only** — for Gunicorn prefork, uWSGI, or `multiprocessing`, use `ProcessSafeCounterSource` (see [Multi-process deployment](#multi-process-deployment))
 
 ---
 
@@ -196,6 +196,31 @@ id64 = permutation.forward(raw)         # obfuscate with invertible bijection
 
 ---
 
+## Multi-process deployment
+
+For any deployment where more than one OS process shares the same state file, use `ProcessSafeCounterSource`:
+
+```python
+from permid64 import Id64, ProcessSafeCounterSource
+from permid64.permutation import MultiplyOddPermutation
+
+src = ProcessSafeCounterSource("/var/lib/myapp/counter.state", block_size=256)
+gen = Id64(
+    instance_id=1,
+    source=src,
+    permutation=MultiplyOddPermutation(),
+)
+```
+
+- POSIX: `fcntl.lockf` (OFD semantics) — survives `fork()` without deadlock
+- Fork-safe: child processes automatically discard the inherited in-memory block and reserve a fresh one
+- NFS/CIFS: emits a `UserWarning` once per process; move the state file to local storage for guaranteed correctness
+- Windows: best-effort (`msvcrt.locking`); use distinct state files per process until v0.5
+
+See [MULTI_PROCESS.md](MULTI_PROCESS.md) for the full deployment guide.
+
+---
+
 ## Running tests
 
 ```bash
@@ -243,11 +268,11 @@ Sample output (Apple M2):
 
 ## Limitations
 
-### Single-process only
+### Multi-process deployments
 
-`PersistentCounterSource` is **not safe for concurrent use across multiple processes** sharing the same state file. A best-effort `fcntl.flock` advisory lock is applied during block reservation on POSIX systems, but this is not a hard guarantee — do not rely on it as a substitute for proper shard isolation.
+`PersistentCounterSource` is **not safe for concurrent use across multiple processes** sharing the same state file. Use `ProcessSafeCounterSource` instead — it provides hard multi-process guarantees on POSIX via `fcntl.lockf` (OFD semantics) and is fork-safe.
 
-The correct pattern for multiple processes is to assign each a **distinct `instance_id`** and a **distinct state file**. Process-safe file locking for shared state files is planned for **v0.3**, human-friendly encodings for **v0.4**, and a central block allocator (`ReservedBlockSource`) for **v0.5**.
+On Windows, `ProcessSafeCounterSource` falls back to best-effort `msvcrt.locking`. Use distinct state files per process until v0.5.
 
 ### Feistel is obfuscation, not encryption
 
@@ -269,7 +294,7 @@ The default 48-bit sequence space supports ~281 trillion IDs per shard. This is 
 permid64/
   __init__.py       # public exports: Id64, DecodedId, codecs, Id64Config, …
   generator.py      # Id64 façade
-  source.py         # PersistentCounterSource
+  source.py         # PersistentCounterSource, ProcessSafeCounterSource
   layout.py         # Layout64 — pack/unpack 64-bit raw value
   permutation.py    # MultiplyOddPermutation, Feistel64Permutation, IdentityPermutation
   codec.py          # fixed-width Base62 / Crockford Base32 for u64
@@ -296,7 +321,7 @@ benchmarks/
 |---|---|---|---|
 | **v0.1** | Core primitives | `PersistentCounterSource`, Feistel / Multiplicative permutation, `decode()` | ✅ Released |
 | **v0.2** | Encoding & Config | `IdentityPermutation`, fixed-width Base62 + Crockford Base32 (`next_base62` / `decode_base62`, `next_base32` / `decode_base32`), `Id64Config` + `build_id64` | ✅ Released |
-| **v0.3** | Multi-process safety | Process-safe file locking (`fcntl` / `msvcrt`), documented single-machine multi-process patterns (e.g. Gunicorn / prefork), safer state file semantics | 🔜 Next |
+| **v0.3** | Multi-process safety | `ProcessSafeCounterSource` with `fcntl.lockf` (OFD semantics), fork-safety PID check, NFS detection, sidecar `.lock` file, `PermId64ConfigError` | ✅ Released |
 | **v0.4** | Human-friendly output | Check digit (+1 char checksum), `PrefixedEncoder` (`ORD_` / `TKT_` / …), `FormatSpec` (segmented display, ambiguity-free charset for manual entry) | Planned |
 | **v0.5** | Distributed sources | `ReservedBlockSource` (central allocator, Redis / PG-backed block rental), `instance_id` helpers (hostname hash, env var, StatefulSet ordinal) | Planned |
 | **v0.6** | Solution presets | `OrderIdGenerator`, `TicketIdGenerator`, `CorrelationIdGenerator`, `IoTEventIdGenerator` — ready-made recipes for common use cases | Planned |

@@ -41,7 +41,7 @@ from .permutation import (
     MultiplyOddPermutation,
     Permutation64Protocol,
 )
-from .source import PersistentCounterSource
+from .source import PersistentCounterSource, ProcessSafeCounterSource
 from .types import DecodedId
 
 
@@ -64,7 +64,7 @@ class Id64:
     def __init__(
         self,
         instance_id: int,
-        source: PersistentCounterSource,
+        source: "PersistentCounterSource | ProcessSafeCounterSource",
         permutation: Permutation64Protocol,
         layout: Layout64 | None = None,
     ) -> None:
